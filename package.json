@@ -19,6 +19,11 @@
       "require": "./lib/index.js",
       "import": "./lib/index.js"
     },
+    "./filters": {
+      "types": "./typings/filters.d.ts",
+      "require": "./lib/filters.js",
+      "import": "./lib/filters.js"
+    },
     "./future": {
       "types": "./future.d.ts",
       "require": "./future.js",
@@ -66,7 +71,7 @@
     "p-timeout": "^4.1.0",
     "safe-compare": "^1.1.4",
     "sandwich-stream": "^2.0.2",
-    "typegram": "^3.11.0"
+    "typegram": "^3.12.0"
   },
   "devDependencies": {
     "@types/debug": "^4.1.7",
