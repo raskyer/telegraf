@@ -1,10 +1,28 @@
-import * as tg from './core/types/typegram'
+import * as tg from 'typegram'
 import * as tt from './telegram-types'
-import ApiClient from './core/network/client'
+import { Client, createApi, type Opts } from '@telegraf/client'
 import { isAbsolute } from 'path'
 import { URL } from 'url'
+import { TelegramError } from './index'
 
-export class Telegram extends ApiClient {
+/** @deprecated */
+export class Telegram {
+  #client: Readonly<Client>
+
+  constructor(token: string) {
+    this.#client = new Client(token)
+  }
+
+  get api() {
+    return createApi(this.#client)
+  }
+
+  async callApi<M extends keyof Opts>(method: M, payload: Opts[M]) {
+    const result = await this.#client.call(method, payload)
+    if (result.ok) return result.result
+    throw new TelegramError(result)
+  }
+
   /**
    * Get basic information about the bot
    */
@@ -329,7 +347,7 @@ export class Telegram extends ApiClient {
    */
   sendVideoNote(
     chatId: number | string,
-    videoNote: string | tg.InputFileVideoNote,
+    videoNote: Opts['sendVideoNote']['video_note'],
     extra?: tt.ExtraVideoNote
   ) {
     return this.callApi('sendVideoNote', {

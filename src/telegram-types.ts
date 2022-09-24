@@ -1,12 +1,13 @@
 /** @format */
 
-import { Message, Opts, Telegram, Update } from './core/types/typegram'
+import { Message, Telegram, Update } from './core/types/typegram'
 import { UnionKeys } from './deunionize'
+import { Opts } from '@telegraf/client'
 
 export { Markup } from './markup'
 
 // tiny helper types
-export type ChatAction = Opts<'sendChatAction'>['action']
+export type ChatAction = Opts['sendChatAction']['action']
 
 // extra types
 /**
@@ -16,8 +17,8 @@ export type ChatAction = Opts<'sendChatAction'>['action']
  */
 type MakeExtra<
   M extends keyof Telegram,
-  K extends keyof Omit<Opts<M>, 'chat_id'> = never
-> = Omit<Opts<M>, 'chat_id' | K>
+  K extends keyof Omit<Opts[M], 'chat_id'> = never
+> = Omit<Opts[M], 'chat_id' | K>
 
 export type ExtraAddStickerToSet = MakeExtra<
   'addStickerToSet',

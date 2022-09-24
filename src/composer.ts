@@ -43,10 +43,9 @@ type MatchedContext<
  * Used by [[`Composer`]],
  * possibly useful for splitting a bot into multiple files.
  */
-export type NarrowedContext<
-  C extends Context,
-  U extends tg.Update
-> = Context<U> & Omit<C, keyof Context>
+export type NarrowedContext<C extends Context, U extends tg.Update> = C & {
+  update: U
+}
 
 export interface GameQueryUpdate extends tg.Update.CallbackQueryUpdate {
   callback_query: Expand<
@@ -73,7 +72,6 @@ export class Composer<C extends Context> implements MiddlewareObj<C> {
    */
   use(...fns: ReadonlyArray<Middleware<C>>) {
     this.handler = Composer.compose([this.handler, ...fns])
-    return this
   }
 
   /**
@@ -154,19 +152,6 @@ export class Composer<C extends Context> implements MiddlewareObj<C> {
 
   filter(predicate: Predicate<C>) {
     return this.use(Composer.filter(predicate))
-  }
-
-  private entity<
-    T extends 'message' | 'channel_post' | tt.MessageSubType =
-      | 'message'
-      | 'channel_post'
-  >(
-    predicate:
-      | MaybeArray<string>
-      | ((entity: tg.MessageEntity, s: string, ctx: C) => boolean),
-    ...fns: ReadonlyArray<Middleware<MatchedContext<C, T>>>
-  ) {
-    return this.use(Composer.entity<C, T>(predicate, ...fns))
   }
 
   email(email: Triggers<C>, ...fns: MatchedMiddleware<C>) {
@@ -348,13 +333,12 @@ export class Composer<C extends Context> implements MiddlewareObj<C> {
   static dispatch<
     C extends Context,
     Handlers extends Record<string | number | symbol, Middleware<C>>
-  >(
-    routeFn: (ctx: C) => MaybePromise<keyof Handlers>,
-    handlers: Handlers
-  ): Middleware<C> {
-    return Composer.lazy<C>((ctx) =>
-      Promise.resolve(routeFn(ctx)).then((value) => handlers[value])
-    )
+  >(routeFn: (ctx: C) => keyof Handlers, handlers: Handlers): Middleware<C> {
+    return (ctx, next) => {
+      const key = routeFn(ctx)
+      if (!Object.hasOwn(ctx, key)) return next()
+      return Composer.unwrap(handlers[key]!)(ctx, next)
+    }
   }
 
   // EXPLANATION FOR THE ts-expect-error ANNOTATIONS
@@ -393,17 +377,6 @@ export class Composer<C extends Context> implements MiddlewareObj<C> {
       // @ts-expect-error see explanation above
       ...fns
     )
-  }
-
-  /**
-   * Generates middleware for handling provided update types.
-   * @deprecated use `Composer.on`
-   */
-  static mount<C extends Context, T extends tt.UpdateType | tt.MessageSubType>(
-    updateType: MaybeArray<T>,
-    ...fns: NonemptyReadonlyArray<Middleware<MatchedContext<C, T>>>
-  ): MiddlewareFn<C> {
-    return Composer.on(updateType, ...fns)
   }
 
   /**
@@ -588,10 +561,8 @@ export class Composer<C extends Context> implements MiddlewareObj<C> {
         ctx.inlineQuery?.query
       if (text === undefined) return next()
       for (const trigger of triggers) {
-        // @ts-expect-error Trust me, TS!
         const match = trigger(text, ctx)
         if (match) {
-          // @ts-expect-error define so far unknown property `match`
           return handler(Object.assign(ctx, { match }), next)
         }
       }
@@ -636,7 +607,6 @@ export class Composer<C extends Context> implements MiddlewareObj<C> {
             offset === 0 &&
             type === 'bot_command' &&
             (commands.includes(value) || groupCommands.includes(value)),
-          // @ts-expect-error see explanation above
           ...fns
         )
       })

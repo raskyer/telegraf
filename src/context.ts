@@ -11,19 +11,25 @@ type Shorthand<FName extends Exclude<keyof Telegram, keyof ApiClient>> = Tail<
   Parameters<Telegram[FName]>
 >
 
-export class Context<U extends Deunionize<tg.Update> = tg.Update> {
+export class Context {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly state: Record<string | symbol, any> = {}
 
   constructor(
-    readonly update: U,
+    readonly update: Deunionize<tg.Update>,
+    /** @deprecated */
     readonly telegram: Telegram,
     readonly botInfo: tg.UserFromGetMe
   ) {}
 
+  get api() {
+    return this.telegram.api
+  }
+
   get updateType() {
     for (const key in this.update) {
-      if (typeof this.update[key] === 'object') return key as UpdateTypes<U>
+      if (typeof this.update[key] === 'object')
+        return key as UpdateTypes<tg.Update>
     }
 
     throw new Error(
@@ -43,73 +49,94 @@ export class Context<U extends Deunionize<tg.Update> = tg.Update> {
   }
 
   get message() {
-    return this.update.message as PropOr<U, 'message'>
+    return this.update.message as PropOr<this['update'], 'message'>
   }
 
   get editedMessage() {
-    return this.update.edited_message as PropOr<U, 'edited_message'>
+    return this.update.edited_message as PropOr<
+      this['update'],
+      'edited_message'
+    >
   }
 
   get inlineQuery() {
-    return this.update.inline_query as PropOr<U, 'inline_query'>
+    return this.update.inline_query as PropOr<this['update'], 'inline_query'>
   }
 
   get shippingQuery() {
-    return this.update.shipping_query as PropOr<U, 'shipping_query'>
+    return this.update.shipping_query as PropOr<
+      this['update'],
+      'shipping_query'
+    >
   }
 
   get preCheckoutQuery() {
-    return this.update.pre_checkout_query as PropOr<U, 'pre_checkout_query'>
+    return this.update.pre_checkout_query as PropOr<
+      this['update'],
+      'pre_checkout_query'
+    >
   }
 
   get chosenInlineResult() {
-    return this.update.chosen_inline_result as PropOr<U, 'chosen_inline_result'>
+    return this.update.chosen_inline_result as PropOr<
+      this['update'],
+      'chosen_inline_result'
+    >
   }
 
   get channelPost() {
-    return this.update.channel_post as PropOr<U, 'channel_post'>
+    return this.update.channel_post as PropOr<this['update'], 'channel_post'>
   }
 
   get editedChannelPost() {
-    return this.update.edited_channel_post as PropOr<U, 'edited_channel_post'>
+    return this.update.edited_channel_post as PropOr<
+      this['update'],
+      'edited_channel_post'
+    >
   }
 
   get callbackQuery() {
-    return this.update.callback_query as PropOr<U, 'callback_query'>
+    return this.update.callback_query as PropOr<
+      this['update'],
+      'callback_query'
+    >
   }
 
   get poll() {
-    return this.update.poll as PropOr<U, 'poll'>
+    return this.update.poll as PropOr<this['update'], 'poll'>
   }
 
   get pollAnswer() {
-    return this.update.poll_answer as PropOr<U, 'poll_answer'>
+    return this.update.poll_answer as PropOr<this['update'], 'poll_answer'>
   }
 
   get myChatMember() {
-    return this.update.my_chat_member as PropOr<U, 'my_chat_member'>
+    return this.update.my_chat_member as PropOr<
+      this['update'],
+      'my_chat_member'
+    >
   }
 
   get chatMember() {
-    return this.update.chat_member as PropOr<U, 'chat_member'>
+    return this.update.chat_member as PropOr<this['update'], 'chat_member'>
   }
 
   get chatJoinRequest() {
     return this.update.chat_join_request
   }
 
-  get chat(): Getter<U, 'chat'> {
+  get chat(): Getter<this['update'], 'chat'> {
     return (
       this.chatMember ??
       this.myChatMember ??
       this.chatJoinRequest ??
       getMessageFromAnySource(this)
-    )?.chat as Getter<U, 'chat'>
+    )?.chat as Getter<this['update'], 'chat'>
   }
 
   get senderChat() {
     return getMessageFromAnySource(this)?.sender_chat as Getter<
-      U,
+      this['update'],
       'sender_chat'
     >
   }
@@ -125,7 +152,7 @@ export class Context<U extends Deunionize<tg.Update> = tg.Update> {
       this.myChatMember ??
       this.chatJoinRequest ??
       getMessageFromAnySource(this)
-    )?.from as Getter<U, 'from'>
+    )?.from as Getter<this['update'], 'from'>
   }
 
   get inlineMessageId() {
@@ -161,17 +188,6 @@ export class Context<U extends Deunionize<tg.Update> = tg.Update> {
       },
       button_text,
     }
-  }
-
-  /**
-   * @deprecated use {@link Telegram.webhookReply}
-   */
-  get webhookReply(): boolean {
-    return this.telegram.webhookReply
-  }
-
-  set webhookReply(enable: boolean) {
-    this.telegram.webhookReply = enable
   }
 
   /**
@@ -1231,7 +1247,7 @@ type Getter<U extends Deunionize<tg.Update>, P extends string> = PropOr<
   P
 >
 
-function getMessageFromAnySource<U extends tg.Update>(ctx: Context<U>) {
+function getMessageFromAnySource(ctx: Context) {
   return (
     ctx.message ??
     ctx.editedMessage ??
